@@ -68,13 +68,12 @@ class EncoderBlock(nn.Module):
         self.norm = norm_layer(ch_out)
         self.act = nn.ReLU(True)
 
-    def forward(self, x, inter: bool = False):
+    def forward(self, x):
         x = self.pad(x)
         x = self.conv(x)
-        x_inter = x if inter else None
         x = self.norm(x)
         x = self.act(x)
-        return x, x_inter
+        return x
 
 
 class DecoderBlock(nn.Module):
