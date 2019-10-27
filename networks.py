@@ -89,7 +89,7 @@ class DecoderBlock(nn.Module):
         self.norm = norm_layer(ch_out)
         self.act = nn.ReLU(True)
 
-    def forward(self, x, use_act: bool = False):
+    def forward(self, x, use_act: bool = True):
         x = self.pad(x)
         x = self.conv(x)
         x = self.norm(x)
@@ -149,9 +149,67 @@ class ComponentEncoder(nn.Module):
         return mu, var
 
 
+# Component Encoders used at Local Embedding Sub-Network
+
+class ComponentDecoder(nn.Module):
+    """ Decoding components. Each Component has a shape of
+    Eye               : (3,  32,  48)
+    Mouth             : (3,  80, 144)
+    Skin (Face, Hair) : (3, 256, 256)
+    """
+
+    def __init__(self, input_shape: tuple = (3, 256, 256), norm_type: str = 'instance',
+                 n_feat: int = 64, ch_emb: int = 512):
+        super(ComponentDecoder, self).__init__()
+
+        c, w, h = input_shape
+        self.ch_emb = ch_emb
+        curr_feat: int = self.ch_emb
+        n_repeats = int(np.log2(self.ch_emb) - np.log2(n_feat))
+
+        assert w in [32, 80, 256]
+
+        layers: list = []
+        if w == 256:  # in case of skin (face, hair)
+            for _ in range(3):
+                layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+
+        for _ in range(n_repeats):
+            layers.append(DecoderBlock(curr_feat, curr_feat * 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+            curr_feat //= 2
+
+        layers += [
+            nn.ReflectionPad2d(2),
+            nn.Conv2d(curr_feat, c, kernel_size=5, padding=0),
+            nn.Tanh()
+        ]
+        self.model = nn.Sequential(*layers)
+
+        self.w_enc: int = w // (2 ** len(layers))
+        self.h_enc: int = h // (2 ** len(layers))
+
+        self.fc = nn.Sequential(
+            nn.Linear(ch_emb, ch_emb * self.w_enc * self.h_enc),
+        )
+
+    def forward(self, x):
+        x = self.fc(x)
+        x = x.view(x.size()[0], self.ch_emb, self.w_enc, self.h_enc)
+        x = self.model(x)
+        return x
+
+
 def build_component_encoder(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
     comp_encoder = ComponentEncoder(input_shape=input_shape, norm_type=norm_type)
     if torch.cuda.is_available():
         comp_encoder = comp_encoder.cuda()
     comp_encoder.apply(weights_init)
     return comp_encoder
+
+
+def build_component_decoder(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
+    comp_decoder = ComponentDecoder(input_shape=input_shape, norm_type=norm_type)
+    if torch.cuda.is_available():
+        comp_decoder = comp_decoder.cuda()
+    comp_decoder.apply(weights_init)
+    return comp_decoder
