@@ -20,6 +20,8 @@ def get_norm_layer(norm_type: str = 'instance', num_features: int = 64):
         norm_layer = partial(nn.InstanceNorm2d, affine=False)
     elif norm_type == 'instance_layer':
         norm_layer = partial(ILN, num_features=num_features)
+    elif norm_type == 'adaptive_instance_layer':
+        norm_layer = partial(AdaILN, num_features=num_features)
     else:
         raise NotImplementedError('normalization layer {} is not found'.format(norm_type))
     return norm_layer
@@ -53,8 +55,31 @@ class ILN(nn.Module):
         return out
 
 
+class AdaILN(nn.Module):
+    def __init__(self, num_features: int, eps: float = 1.1e-5,
+                 use_smoothed_rho: bool = True):
+        super(AdaILN, self).__init__()
+
+        self.eps = eps
+        self.rho = nn.Parameter(torch.Tensor(1, num_features, 1, 1))
+        self.rho.data.fill_(.9 if use_smoothed_rho else 1.)
+
+    def forward(self, x, gamma, beta):
+        in_mean, in_var = \
+            torch.mean(x, dim=(2, 3), keepdim=True), torch.var(x, dim=(2, 3), keepdim=True)
+        out_in = (x - in_mean) / torch.sqrt(in_var + self.eps)
+
+        ln_mean, ln_var = \
+            torch.mean(x, dim=(1, 2, 3), keepdim=True), torch.var(x, dim=(1, 2, 3), keepdim=True)
+        out_ln = (x - ln_mean) / torch.sqrt(ln_var + self.eps)
+
+        out = self.rho.expand(x.shape[0], -1, -1, -1) * out_in + (1 - self.rho.expand(x.shape[0], -1, -1, -1)) * out_ln
+        out = out * gamma.unsqueeze(2).unsqueeze(3) + beta.unsqueeze(2).unsqueeze(3)
+        return out
+
+
 class RhoClipper:
-    def __init__(self, _min: float, _max: float):
+    def __init__(self, _min: float = 0., _max: float = 1.):
         self.clip_min = _min
         self.clip_max = _max
         assert _min < _max
