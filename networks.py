@@ -1,6 +1,8 @@
+import torch
 import torch.nn as nn
 
 from .ops import get_norm_layer
+from .ops import weights_init
 
 
 class ResNetBlock(nn.Module):
@@ -51,3 +53,45 @@ class ResNetAdaILNBlock(nn.Module):
         out = self.conv2(out)
         out = self.norm2(out, gamma, beta)
         return out + scale * x
+
+
+class EncoderBlock(nn.Module):
+    def __init__(self, ch_in: int, ch_out: int,
+                 kernel_size: int = 7, pad: int = 3, stride: int = 2, norm_type: str = 'instance'):
+        super(EncoderBlock, self).__init__()
+
+        norm_layer = get_norm_layer(norm_type=norm_type)
+
+        self.pad = nn.ReflectionPad2d(pad)
+        self.conv = nn.Conv2d(in_channels=ch_in, out_channels=ch_out, kernel_size=kernel_size, stride=stride)
+        self.norm = norm_layer(ch_out)
+        self.act = nn.ReLU(True)
+
+    def forward(self, x, inter: bool = False):
+        x = self.pad(x)
+        x = self.conv(x)
+        x_inter = x if inter else None
+        x = self.norm(x)
+        x = self.act(x)
+        return x, x_inter
+
+
+class DecoderBlock(nn.Module):
+    def __init__(self, ch_in: int, ch_out: int,
+                 kernel_size: int = 4, pad: int = 1, stride: int = 2, norm_type: str = 'instance'):
+        super(DecoderBlock, self).__init__()
+
+        norm_layer = get_norm_layer(norm_type=norm_type)
+
+        self.pad = nn.ReflectionPad2d(pad)
+        self.conv = nn.ConvTranspose2d(in_channels=ch_in, out_channels=ch_out, kernel_size=kernel_size, stride=stride)
+        self.norm = norm_layer(ch_out)
+        self.act = nn.ReLU(True)
+
+    def forward(self, x, use_act: bool = False):
+        x = self.pad(x)
+        x = self.conv(x)
+        x = self.norm(x)
+        if use_act:
+            x = self.act(x)
+        return x
