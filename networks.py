@@ -272,3 +272,14 @@ def build_component_projector(input_shape: tuple = (3, 256, 256), norm_type: str
         comp_projector = comp_projector.cuda()
     comp_projector.apply(weights_init)
     return comp_projector
+
+
+# Discriminators
+
+class MultiScaleDiscriminator(nn.Module):
+    def __init__(self, n_feats: int = 64, n_layers: int = 3, norm_type: str = 'instance',
+                 use_sigmoid: bool = False, num_disc: int = 3):
+        super(MultiScaleDiscriminator, self).__init__()
+
+    def forward(self, x):
+        return x
