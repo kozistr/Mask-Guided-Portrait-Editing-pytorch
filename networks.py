@@ -1,8 +1,7 @@
-import torch
+import numpy as np
 import torch.nn as nn
 
 from .ops import get_norm_layer
-from .ops import weights_init
 
 
 class ResNetBlock(nn.Module):
@@ -95,3 +94,52 @@ class DecoderBlock(nn.Module):
         if use_act:
             x = self.act(x)
         return x
+
+
+# Component Encoders used at Local Embedding Sub-Network
+
+class ComponentEncoder(nn.Module):
+    """ Encoding components. Each Component has a shape of
+    Eye               : (3,  32,  48)
+    Mouth             : (3,  80, 144)
+    Skin (Face, Hair) : (3, 256, 256)
+    """
+
+    def __init__(self, input_shape: tuple = (3, 256, 256),
+                 n_feat: int = 64, ch_emb: int = 512, inter_fc_units: int = 1024):
+        super(ComponentEncoder, self).__init__()
+
+        c, w, h = input_shape
+        curr_feat: int = n_feat
+        n_repeats = int(np.log2(ch_emb) - np.log2(curr_feat))
+
+        layers: list = [EncoderBlock(c, curr_feat, kernel_size=4, pad=1, stride=2)]
+        for _ in range(n_repeats):
+            layers.append(EncoderBlock(curr_feat, curr_feat * 2, kernel_size=4, pad=1, stride=2))
+            curr_feat *= 2
+
+        if w == 256:  # in case of skin (face, hair)
+            for _ in range(3):
+                layers.append(EncoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2))
+
+        w_enc: int = w // (2 ** len(layers))
+        h_enc: int = h // (2 ** len(layers))
+
+        self.model = nn.Sequential(*layers)
+
+        self.fc_mu = nn.Sequential(
+            nn.Linear(ch_emb * w_enc * h_enc, inter_fc_units),
+            nn.ReLU(True),
+            nn.Linear(inter_fc_units, ch_emb)
+        )
+        self.fc_var = nn.Sequential(
+            nn.Linear(ch_emb * w_enc * h_enc, inter_fc_units),
+            nn.ReLU(True),
+            nn.Linear(inter_fc_units, ch_emb)
+        )
+
+    def forward(self, x):
+        x = self.model(x)
+        x = x.view(x.size()[0], -1)
+        mu, var = self.fc_mu(x), self.fc_var(x)
+        return mu, var
