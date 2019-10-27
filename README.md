@@ -10,6 +10,16 @@ Original Repo is [here!](https://github.com/cientgu/Mask_Guided_Portrait_Editing
 which can synthesize diverse, high-quality and controllable facial images from given masks. 
 With the changeable input facial mask and source image, this method allows users to do high-level portrait editing.
 
+# Architecture
+
+## Local Components Parsing Network
+
+## Local Embedding Sub-Network
+
+## Mask-Guided Generative Sub-Network
+
+## Background Fusing Sub-Network
+
 # Usage
 
 # Result
