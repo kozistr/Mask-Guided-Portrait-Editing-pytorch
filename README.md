@@ -14,6 +14,9 @@ With the changeable input facial mask and source image, this method allows users
 
 ## Local Components Parsing Network
 
+I use a custom network for parsing face & hair components, which is different w/ the paper.
+Left components (eyes, mouth, nose) are parsed w/ fixed coordination.
+
 ## Local Embedding Sub-Network
 
 ## Mask-Guided Generative Sub-Network
