@@ -15,9 +15,9 @@ def weights_init(m):
 
 def get_norm_layer(norm_type: str = 'instance', num_features: int = 64):
     if norm_type == 'batch':
-        norm_layer = partial(nn.BatchNorm2d, affine=True)
+        norm_layer = partial(nn.BatchNorm2d, affine=True, momentum=.9)
     elif norm_type == 'instance':
-        norm_layer = partial(nn.InstanceNorm2d, affine=False)
+        norm_layer = partial(nn.InstanceNorm2d, affine=False, momentum=.9)
     elif norm_type == 'instance_layer':
         norm_layer = partial(ILN, num_features=num_features)
     elif norm_type == 'adaptive_instance_layer':
