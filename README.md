@@ -17,6 +17,10 @@ With the changeable input facial mask and source image, this method allows users
 I use a custom network for parsing face & hair components, which is different w/ the paper.
 Left components (eyes, mouth, nose) are parsed w/ fixed coordination.
 
+Performance about my face & hair parsing network, The network achieves ... on Figaro1K test dataset. 
+
+More Details are [here](https://github.com/kozistr/face-hair-segmentation-keras).
+
 ## Local Embedding Sub-Network
 
 ## Mask-Guided Generative Sub-Network
