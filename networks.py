@@ -1,7 +1,9 @@
+import torch
 import numpy as np
 import torch.nn as nn
 
 from .ops import get_norm_layer
+from .ops import weights_init
 
 
 class ResNetBlock(nn.Module):
@@ -105,7 +107,7 @@ class ComponentEncoder(nn.Module):
     Skin (Face, Hair) : (3, 256, 256)
     """
 
-    def __init__(self, input_shape: tuple = (3, 256, 256),
+    def __init__(self, input_shape: tuple = (3, 256, 256), norm_type: str = 'instance',
                  n_feat: int = 64, ch_emb: int = 512, inter_fc_units: int = 1024):
         super(ComponentEncoder, self).__init__()
 
@@ -113,14 +115,16 @@ class ComponentEncoder(nn.Module):
         curr_feat: int = n_feat
         n_repeats = int(np.log2(ch_emb) - np.log2(curr_feat))
 
+        assert w in [32, 80, 256]
+
         layers: list = [EncoderBlock(c, curr_feat, kernel_size=4, pad=1, stride=2)]
         for _ in range(n_repeats):
-            layers.append(EncoderBlock(curr_feat, curr_feat * 2, kernel_size=4, pad=1, stride=2))
+            layers.append(EncoderBlock(curr_feat, curr_feat * 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
             curr_feat *= 2
 
         if w == 256:  # in case of skin (face, hair)
             for _ in range(3):
-                layers.append(EncoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2))
+                layers.append(EncoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
 
         w_enc: int = w // (2 ** len(layers))
         h_enc: int = h // (2 ** len(layers))
@@ -143,3 +147,11 @@ class ComponentEncoder(nn.Module):
         x = x.view(x.size()[0], -1)
         mu, var = self.fc_mu(x), self.fc_var(x)
         return mu, var
+
+
+def build_component_encoder(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
+    comp_encoder = ComponentEncoder(input_shape=input_shape, norm_type=norm_type)
+    if torch.cuda.is_available():
+        comp_encoder = comp_encoder.cuda()
+    comp_encoder.apply(weights_init)
+    return comp_encoder
