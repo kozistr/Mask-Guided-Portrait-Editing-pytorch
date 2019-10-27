@@ -1,5 +1,7 @@
 # Mask-Guided-Portrait-Editing-pytorch
-Unofficial Mask Guided Portrait Editing w/ cGAN implementation in pytorch
+Unofficial Mask Guided Portrait Editing w/ cGAN implementation in pytorch.
+
+Original Repo is [here!](https://github.com/cientgu/Mask_Guided_Portrait_Editing)
 
 **WIP** / This implementation includes my version of tunings/tweaks :)
 
