@@ -171,12 +171,15 @@ class ComponentDecoder(nn.Module):
 
         layers: list = []
         if w == 256:  # in case of skin (face, hair)
-            for _ in range(3):
+            for _ in range(4):
                 layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
 
         for _ in range(n_repeats):
             layers.append(DecoderBlock(curr_feat, curr_feat // 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
             curr_feat //= 2
+
+        if w != 256:  # in case of skin (mouth, eye)
+            layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
 
         # len(layers) -> number of decoder blocks
         self.w_enc: int = w // (2 ** len(layers))
