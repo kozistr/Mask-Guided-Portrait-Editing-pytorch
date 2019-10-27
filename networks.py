@@ -175,8 +175,12 @@ class ComponentDecoder(nn.Module):
                 layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
 
         for _ in range(n_repeats):
-            layers.append(DecoderBlock(curr_feat, curr_feat * 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+            layers.append(DecoderBlock(curr_feat, curr_feat // 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
             curr_feat //= 2
+
+        # len(layers) -> number of decoder blocks
+        self.w_enc: int = w // (2 ** len(layers))
+        self.h_enc: int = h // (2 ** len(layers))
 
         layers += [
             nn.ReflectionPad2d(2),
@@ -185,9 +189,6 @@ class ComponentDecoder(nn.Module):
         ]
         self.model = nn.Sequential(*layers)
 
-        self.w_enc: int = w // (2 ** len(layers))
-        self.h_enc: int = h // (2 ** len(layers))
-
         self.fc = nn.Sequential(
             nn.Linear(ch_emb, ch_emb * self.w_enc * self.h_enc),
         )
@@ -195,6 +196,53 @@ class ComponentDecoder(nn.Module):
     def forward(self, x):
         x = self.fc(x)
         x = x.view(x.size()[0], self.ch_emb, self.w_enc, self.h_enc)
+        x = self.model(x)
+        return x
+
+
+# Component Projector used at Mask-Guided Generative Sub-Network
+
+class ComponentProjector(nn.Module):
+    """ Projecting component's embedding. Each projected component's embedding has a shape of
+    Eye               : (256,  8, 12)
+    Mouth             : (256, 20, 36)
+    Skin (Face, Hair) : (256, 64, 64)
+    """
+
+    def __init__(self, input_shape: tuple = (3, 256, 256), norm_type: str = 'instance',
+                 ch_emb: int = 512, ch_proj: int = 256):
+        super(ComponentProjector, self).__init__()
+
+        c, w, h = input_shape
+        self.ch_proj = ch_proj
+        curr_feat: int = ch_emb
+        n_repeats = int(np.log2(ch_emb) - np.log2(self.ch_proj))
+
+        assert w in [32, 80, 256]
+
+        layers: list = []
+        for _ in range(n_repeats):
+            layers.append(DecoderBlock(curr_feat, curr_feat // 2, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+            curr_feat //= 2
+
+        if w == 256:  # in case of skin (face, hair)
+            for _ in range(3):
+                layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+
+        layers.append(DecoderBlock(curr_feat, curr_feat, kernel_size=4, pad=1, stride=2, norm_type=norm_type))
+
+        self.model = nn.Sequential(*layers)
+
+        self.w_enc: int = w // (2 ** (len(layers) + 2))
+        self.h_enc: int = h // (2 ** (len(layers) + 2))
+
+        self.fc = nn.Sequential(
+            nn.Linear(ch_emb, ch_emb * self.w_enc * self.h_enc, bias=False),
+        )
+
+    def forward(self, x):
+        x = self.fc(x)
+        x = x.view(x.size()[0], self.ch_proj, self.w_enc, self.h_enc)
         x = self.model(x)
         return x
 
@@ -213,3 +261,11 @@ def build_component_decoder(input_shape: tuple = (3, 256, 256), norm_type: str =
         comp_decoder = comp_decoder.cuda()
     comp_decoder.apply(weights_init)
     return comp_decoder
+
+
+def build_component_projector(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
+    comp_projector = ComponentProjector(input_shape=input_shape, norm_type=norm_type)
+    if torch.cuda.is_available():
+        comp_projector = comp_projector.cuda()
+    comp_projector.apply(weights_init)
+    return comp_projector
