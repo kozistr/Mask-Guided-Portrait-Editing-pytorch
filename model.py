@@ -1,6 +1,4 @@
-from .networks import build_component_encoder
-from .networks import build_component_decoder
-from .networks import build_component_projector
+from .networks import build_component_models
 
 
 class MaskGuidedPortraitEditing:
@@ -30,25 +28,40 @@ class MaskGuidedPortraitEditing:
 
     def build_networks(self):
         # Local Embedding Sub-Network # Encoder
-        self.net_face_encoder = build_component_encoder(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_hair_encoder = build_component_encoder(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_mouth_encoder = build_component_encoder(input_shape=(3, 80, 144), norm_type=self.norm_type)
-        self.net_left_eye_encoder = build_component_encoder(input_shape=(3, 32, 40), norm_type=self.norm_type)
-        self.net_right_eye_encoder = build_component_encoder(input_shape=(3, 32, 40), norm_type=self.norm_type)
+        self.net_face_encoder = build_component_models(model_type='encoder', input_shape=(3, 256, 256),
+                                                       norm_type=self.norm_type)
+        self.net_hair_encoder = build_component_models(model_type='encoder', input_shape=(3, 256, 256),
+                                                       norm_type=self.norm_type)
+        self.net_mouth_encoder = build_component_models(model_type='encoder', input_shape=(3, 80, 144),
+                                                        norm_type=self.norm_type)
+        self.net_left_eye_encoder = build_component_models(model_type='encoder', input_shape=(3, 32, 40),
+                                                           norm_type=self.norm_type)
+        self.net_right_eye_encoder = build_component_models(model_type='encoder', input_shape=(3, 32, 40),
+                                                            norm_type=self.norm_type)
 
         # Local Embedding Sub-Network # Decoder
-        self.net_face_decoder = build_component_decoder(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_hair_decoder = build_component_decoder(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_mouth_decoder = build_component_decoder(input_shape=(3, 80, 144), norm_type=self.norm_type)
-        self.net_left_eye_decoder = build_component_decoder(input_shape=(3, 32, 40), norm_type=self.norm_type)
-        self.net_right_eye_decoder = build_component_decoder(input_shape=(3, 32, 40), norm_type=self.norm_type)
+        self.net_face_decoder = build_component_models(model_type='decoder', input_shape=(3, 256, 256),
+                                                       norm_type=self.norm_type)
+        self.net_hair_decoder = build_component_models(model_type='decoder', input_shape=(3, 256, 256),
+                                                       norm_type=self.norm_type)
+        self.net_mouth_decoder = build_component_models(model_type='decoder', input_shape=(3, 80, 144),
+                                                        norm_type=self.norm_type)
+        self.net_left_eye_decoder = build_component_models(model_type='decoder', input_shape=(3, 32, 40),
+                                                           norm_type=self.norm_type)
+        self.net_right_eye_decoder = build_component_models(model_type='decoder', input_shape=(3, 32, 40),
+                                                            norm_type=self.norm_type)
 
         # Component Embedding Projector
-        self.net_face_projector = build_component_projector(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_hair_projector = build_component_projector(input_shape=(3, 256, 256), norm_type=self.norm_type)
-        self.net_mouth_projector = build_component_projector(input_shape=(3, 80, 144), norm_type=self.norm_type)
-        self.net_left_eye_projector = build_component_projector(input_shape=(3, 32, 40), norm_type=self.norm_type)
-        self.net_right_eye_projector = build_component_projector(input_shape=(3, 32, 40), norm_type=self.norm_type)
+        self.net_face_projector = build_component_models(model_type='projector', input_shape=(3, 256, 256),
+                                                         norm_type=self.norm_type)
+        self.net_hair_projector = build_component_models(model_type='projector', input_shape=(3, 256, 256),
+                                                         norm_type=self.norm_type)
+        self.net_mouth_projector = build_component_models(model_type='projector', input_shape=(3, 80, 144),
+                                                          norm_type=self.norm_type)
+        self.net_left_eye_projector = build_component_models(model_type='projector', input_shape=(3, 32, 40),
+                                                             norm_type=self.norm_type)
+        self.net_right_eye_projector = build_component_models(model_type='projector', input_shape=(3, 32, 40),
+                                                              norm_type=self.norm_type)
 
         # Discriminators
 

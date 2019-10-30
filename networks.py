@@ -249,28 +249,23 @@ class ComponentProjector(nn.Module):
         return x
 
 
-def build_component_encoder(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
-    comp_encoder = ComponentEncoder(input_shape=input_shape, norm_type=norm_type)
+def build_component_models(model_type: str = 'encoder',
+                           input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
+    params: dict = {'input_shape': input_shape, 'norm_type': norm_type}
+    if model_type == 'encoder':
+        model = ComponentEncoder(**params)
+    elif model_type == 'decoder':
+        model = ComponentDecoder(**params)
+    elif model_type == 'projector':
+        model = ComponentProjector(**params)
+    else:
+        raise NotImplementedError('[-] not supported model type {}'.format(model_type))
+
     if torch.cuda.is_available():
-        comp_encoder = comp_encoder.cuda()
-    comp_encoder.apply(weights_init)
-    return comp_encoder
+        model = model.cuda()
 
-
-def build_component_decoder(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
-    comp_decoder = ComponentDecoder(input_shape=input_shape, norm_type=norm_type)
-    if torch.cuda.is_available():
-        comp_decoder = comp_decoder.cuda()
-    comp_decoder.apply(weights_init)
-    return comp_decoder
-
-
-def build_component_projector(input_shape: tuple = (3, 256, 256), norm_type: str = 'instance'):
-    comp_projector = ComponentProjector(input_shape=input_shape, norm_type=norm_type)
-    if torch.cuda.is_available():
-        comp_projector = comp_projector.cuda()
-    comp_projector.apply(weights_init)
-    return comp_projector
+    model.apply(weights_init)
+    return model
 
 
 # Discriminators
